@@ -1,0 +1,79 @@
+import gradio as gr
+
+# マイジャグラーV設定
+settings = {
+    1: {"big": 273, "reg": 409, "pay": 97.0},
+    2: {"big": 270, "reg": 385, "pay": 98.0},
+    3: {"big": 266, "reg": 336, "pay": 99.9},
+    4: {"big": 254, "reg": 290, "pay": 102.8},
+    5: {"big": 240, "reg": 268, "pay": 105.3},
+    6: {"big": 229, "reg": 229, "pay": 109.4},
+}
+
+def analyze(spins, big, reg, budget,
+            reg_strong, narabi, jyoren, kaiten):
+
+    if big + reg == 0:
+        return "ボーナスなし"
+
+    # 確率
+    big_p = spins / big if big > 0 else 0
+    reg_p = spins / reg if reg > 0 else 0
+    gassan = spins / (big + reg)
+
+    # 設定推測（REG重視強化🔥）
+    results = []
+    for s, data in settings.items():
+        diff = abs(big_p - data["big"]) + abs(reg_p - data["reg"] * 1.5)
+        results.append((s, diff, data["pay"]))
+
+    best = sorted(results, key=lambda x: x[1])[0]
+    best_setting = best[0]
+    pay = best[2]
+
+    # 期待収支
+    expected = int(budget * (pay / 100 - 1))
+
+    # 店評価
+    score = sum([reg_strong, narabi, jyoren, kaiten])
+
+    if score >= 3:
+        shop_rank = "優良店の可能性大🔥"
+    elif score == 2:
+        shop_rank = "普通"
+    else:
+        shop_rank = "回収寄り⚠️"
+
+    return f"""
+【マイジャグV 実データ】
+BIG: 1/{int(big_p)}
+REG: 1/{int(reg_p)}
+合算: 1/{int(gassan)}
+
+【推定設定】
+設定{best_setting}（機械割 {pay}%）
+
+【期待収支】
+約 {expected} 円
+
+【店評価】
+チェック数: {score}/4
+判定: {shop_rank}
+"""
+
+gr.Interface(
+    fn=analyze,
+    inputs=[
+        gr.Number(label="総回転数"),
+        gr.Number(label="BIG回数"),
+        gr.Number(label="REG回数"),
+        gr.Number(label="投資予定（円）"),
+
+        gr.Checkbox(label="REG強い台あり"),
+        gr.Checkbox(label="並びあり"),
+        gr.Checkbox(label="常連粘りあり"),
+        gr.Checkbox(label="回転率良い"),
+    ],
+    outputs="text",
+    title="マイジャグラーV 完全判別ツール"
+).launch()
