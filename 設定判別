@@ -1,0 +1,31 @@
+import gradio as gr
+
+def analyze(spins,big,reg):
+  total_bonus = big + reg
+  if total_bonus == 0:
+    return "ボーナスなし"
+
+  gassan = spins / total_bonus
+
+  # 簡易判定
+  if gassan < 130:
+    rank = "高設定の可能性大🔥"
+  elif gassan < 150:
+    rank = "中間以上の可能性あり"
+  else:
+    rank = "低設定"
+
+  return f"合算　：1/{int(gassan)}\n判定: {rank}"
+
+
+gr.Interface(
+    fn=analyze,
+    inputs=[
+        gr.Number(label="総回転数"),
+        gr.Number(label="BIG回数"),
+        gr.Number(label="REG回数"),
+    ],
+    outputs="text",
+    title="アイムジャグラー台判別ツール"
+).launch()
+
