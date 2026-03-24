@@ -1,22 +1,65 @@
 import gradio as gr
 
-def analyze(spins,big,reg):
-  total_bonus = big + reg
-  if total_bonus == 0:
-    return "ボーナスなし"
+# 設定データ
+settings = {
+    1: {"big": 273, "reg": 439, "pay": 97.0},
+    2: {"big": 269, "reg": 399, "pay": 98.0},
+    3: {"big": 269, "reg": 331, "pay": 99.5},
+    4: {"big": 259, "reg": 315, "pay": 101.1},
+    5: {"big": 259, "reg": 255, "pay": 103.3},
+    6: {"big": 255, "reg": 255, "pay": 105.5},
+}
 
-  gassan = spins / total_bonus
+def analyze(spins, big, reg, budget,
+            reg_strong, narabi, jyoren, kaiten):
 
-  # 簡易判定
-  if gassan < 130:
-    rank = "高設定の可能性大🔥"
-  elif gassan < 150:
-    rank = "中間以上の可能性あり"
-  else:
-    rank = "低設定"
+    if big + reg == 0:
+        return "ボーナスなし"
 
-  return f"合算　：1/{int(gassan)}\n判定: {rank}"
+    # --- 確率 ---
+    big_p = spins / big if big > 0 else 0
+    reg_p = spins / reg if reg > 0 else 0
+    gassan = spins / (big + reg)
 
+    # --- 設定推測 ---
+    results = []
+    for s, data in settings.items():
+        diff = abs(big_p - data["big"]) + abs(reg_p - data["reg"])
+        results.append((s, diff, data["pay"]))
+
+    best = sorted(results, key=lambda x: x[1])[0]
+    best_setting = best[0]
+    pay = best[2]
+
+    # --- 期待収支 ---
+    expected = int(budget * (pay / 100 - 1))
+
+    # --- 店判定 ---
+    score = sum([reg_strong, narabi, jyoren, kaiten])
+
+    if score >= 3:
+        shop_rank = "優良店の可能性大🔥"
+    elif score == 2:
+        shop_rank = "普通"
+    else:
+        shop_rank = "回収寄り⚠️"
+
+    return f"""
+【実データ】
+BIG: 1/{int(big_p)}
+REG: 1/{int(reg_p)}
+合算: 1/{int(gassan)}
+
+【推定設定】
+設定{best_setting}（機械割 {pay}%）
+
+【期待収支】
+約 {expected} 円
+
+【店評価】
+チェック数: {score}/4
+判定: {shop_rank}
+"""
 
 gr.Interface(
     fn=analyze,
@@ -24,8 +67,13 @@ gr.Interface(
         gr.Number(label="総回転数"),
         gr.Number(label="BIG回数"),
         gr.Number(label="REG回数"),
+        gr.Number(label="投資予定（円）"),
+
+        gr.Checkbox(label="REG強い台あり"),
+        gr.Checkbox(label="並びあり"),
+        gr.Checkbox(label="常連粘りあり"),
+        gr.Checkbox(label="回転率良い"),
     ],
     outputs="text",
-    title="アイムジャグラー台判別ツール"
+    title="ジャグラー完全判別＋店評価ツール"
 ).launch()
-
